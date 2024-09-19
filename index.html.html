@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minimalist Pomodoro Timer</title>
+  <style>
+    /* General body styling */
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #000000; /* Black background */
+      color: #ffffff; /* White text for contrast */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    /* Main container */
+    #app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #000000; /* Black background */
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 10px rgba(255, 255, 255, 0.5); /* White shadow */
+      text-align: center;
+    }
+
+    /* Timer display */
+    #timer-display {
+      font-size: 72px;
+      margin: 20px 0;
+      font-weight: bold;
+      color: #ffffff; /* White text */
+    }
+
+    /* Buttons styling */
+    button {
+      background-color: #000000; /* Black background */
+      color: #ffffff; /* White text */
+      border: 2px solid #ffffff; /* White border */
+      padding: 10px 25px;
+      margin: 10px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    button:hover {
+      background-color: #333333; /* Darker shade of black */
+    }
+
+    /* Break buttons specific styling */
+    #break-options button {
+      background-color: #000000; /* Black background */
+    }
+
+    #break-options button:hover {
+      background-color: #333333; /* Darker shade */
+    }
+
+    /* Break options styling */
+    #break-options {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    /* Start and Reset buttons container */
+    #buttons {
+      display: flex;
+      gap: 20px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>Pomodoro Timer</h1>
+    <div id="timer-display">25:00</div>
+    <div id="buttons">
+      <button id="start-btn">Start</button>
+      <button id="reset-btn">Reset</button>
+    </div>
+    <div id="break-options">
+      <button id="short-break-btn">Short Break</button>
+      <button id="long-break-btn">Long Break</button>
+    </div>
+  </div>
+
+  <script>
+    // Register the service worker for offline functionality
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js').then(function(registration) {
+        console.log('Service Worker registered with scope:', registration.scope);
+      }, function(err) {
+        console.log('Service Worker registration failed:', err);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const timerDisplay = document.getElementById('timer-display');
+      const startBtn = document.getElementById('start-btn');
+      const resetBtn = document.getElementById('reset-btn');
+      const shortBreakBtn = document.getElementById('short-break-btn');
+      const longBreakBtn = document.getElementById('long-break-btn');
+
+      let pomodoroTime = 25 * 60; // 25 minutes
+      let timeRemaining = pomodoroTime;
+      let timerInterval = null;
+      let isRunning = false;
+      let currentMode = 'pomodoro'; // 'pomodoro', 'short-break', 'long-break'
+
+      function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+      }
+
+      function updateDisplay() {
+        timerDisplay.textContent = formatTime(timeRemaining);
+      }
+
+      function startTimer() {
+        if (isRunning) return;
+        isRunning = true;
+        timerInterval = setInterval(() => {
+          if (timeRemaining > 0) {
+            timeRemaining--;
+            updateDisplay();
+          } else {
+            clearInterval(timerInterval);
+            isRunning = false;
+            alert('Time’s up!');
+            if (currentMode !== 'pomodoro') {
+              currentMode = 'pomodoro';
+              timeRemaining = pomodoroTime;
+              updateDisplay();
+            }
+          }
+        }, 1000);
+      }
+
+      function resetTimer() {
+        clearInterval(timerInterval);
+        isRunning = false;
+        currentMode = 'pomodoro';
+        timeRemaining = pomodoroTime;
+        updateDisplay();
+      }
+
+      function setBreak(minutes, mode) {
+        clearInterval(timerInterval);
+        isRunning = false;
+        timeRemaining = minutes * 60;
+        currentMode = mode;
+        updateDisplay();
+      }
+
+      startBtn.addEventListener('click', startTimer);
+      resetBtn.addEventListener('click', resetTimer);
+      shortBreakBtn.addEventListener('click', () => setBreak(5, 'short-break'));
+      longBreakBtn.addEventListener('click', () => setBreak(10, 'long-break'));
+
+      updateDisplay();
+    });
+  </script>
+
+  <!-- Service worker file -->
+  <script id="service-worker.js" type="javascript">
+    const CACHE_NAME = 'pomodoro-cache';
+    const urlsToCache = [
+      '/',
+      '/index.html',
+      '/style.css',
+      '/script.js'
+    ];
+
+    self.addEventListener('install', function(event) {
+      event.waitUntil(
+        caches.open(CACHE_NAME)
+          .then(function(cache) {
+            return cache.addAll(urlsToCache);
+          })
+      );
+    });
+
+    self.addEventListener('fetch', function(event) {
+      event.respondWith(
+        caches.match(event.request)
+          .then(function(response) {
+            return response || fetch(event.request);
+          })
+      );
+    });
+  </script>
+</body>
+</html>
